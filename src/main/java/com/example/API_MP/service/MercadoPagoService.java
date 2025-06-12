@@ -1,0 +1,113 @@
+package com.example.API_MP.service;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.example.API_MP.entidades.ProductoRequestDTO;
+import com.example.API_MP.entidades.Productos;
+import com.example.API_MP.entidades.Transacciones;
+import com.example.API_MP.entidades.Usuarios;
+import com.example.API_MP.entidades.WebhookDTO;
+import com.example.API_MP.repository.ProductosRepository;
+import com.example.API_MP.repository.TransaccionesRepository;
+import com.example.API_MP.repository.UsuariosRepository;
+import com.mercadopago.MercadoPagoConfig;
+import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.client.preference.PreferenceClient;
+import com.mercadopago.client.preference.PreferenceItemRequest;
+import com.mercadopago.client.preference.PreferenceRequest;
+import com.mercadopago.resources.payment.Payment;
+import com.mercadopago.resources.preference.Preference;
+
+@Service
+public class MercadoPagoService {
+
+    @Value("${mercadopago.access-token}")
+    String accessToken;
+
+    private final ProductosRepository productoRepository;
+    private final TransaccionesRepository transaccionRepository;
+    private final UsuariosRepository usuariosRepository;
+
+    public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u) {
+        this.productoRepository = p;
+        this.transaccionRepository = t;
+        this.usuariosRepository = u;
+    }
+
+    public String crearPreferencia(ProductoRequestDTO p) throws Exception {
+        // Se busca el producto recibido
+        Productos producto = productoRepository.findById(p.getId())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        // Inicializa config
+        MercadoPagoConfig.setAccessToken(accessToken);
+        
+        // Crea el ítem
+        PreferenceItemRequest item = PreferenceItemRequest.builder()
+                .title(producto.getNombre())
+                .quantity(1)
+                .currencyId("ARS")
+                .unitPrice(new BigDecimal(producto.getPrecio()))
+                .build();
+        
+        // ACA CAMBIAR y Obtener el usuario logueado el cual va a comprar
+        Usuarios usuarioComprador = usuariosRepository.findById(new Long("1"))
+                .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
+        
+        // Se crea la transaccion en la base de datos y se obtiene la misma guardada con su id 
+        Transacciones transaccion = new Transacciones("Pendiente", usuarioComprador, producto);
+        Transacciones transaccionSave = transaccionRepository.save(transaccion);
+        
+        // Arma la preferencia
+        PreferenceRequest preferenceRequest = PreferenceRequest.builder()
+                .items(List.of(item))
+                .externalReference(transaccionSave.getId().toString()) //Aca se manda el id de la transaccion para obtenerlo cuando se haga el pago
+                .build();
+        
+        // Se termina la preferencia
+        PreferenceClient client = new PreferenceClient();
+        Preference preference = client.create(preferenceRequest);
+        
+        // Retorna la URL de pago
+        return preference.getInitPoint();
+    }
+
+    public void procesarWebhook(WebhookDTO webhook) {
+    if (!"payment".equalsIgnoreCase(webhook.getType())) {
+        System.out.println("Webhook ignorado: tipo no soportado " + webhook.getType());
+        return;
+    }
+
+    try {
+        //Obtengo el ID de pago
+        String paymentId = webhook.getData().getId();
+        
+        //Con el id obtenido busco el pago
+        PaymentClient client = new PaymentClient();
+        Payment payment = client.get(Long.parseLong(paymentId));
+        
+        //obtengo el stado del pafo
+        String estado = payment.getStatus();
+
+        //Obtengo el ID del la transaccion para cambiuarte el estado
+        String externalReference = payment.getExternalReference();
+
+        if (externalReference == null) {
+            System.out.println("No se encontró externalReference (transactionId)");
+            return;
+        }
+        //Se castea a Long se va a buscar la transaccion y se le seteaa el nuevo estado
+        Long transactionId = Long.parseLong(externalReference);
+        Transacciones transaccion = transaccionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transacción no encontrada: ID " + transactionId));
+        transaccion.setEstado(estado);
+        transaccionRepository.save(transaccion);
+    } catch (Exception e) {
+        System.out.println("Error al procesar webhook: " + e.getMessage());
+    }
+}
+}
