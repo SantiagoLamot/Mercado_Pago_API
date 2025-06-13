@@ -20,6 +20,7 @@ import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.preference.PreferenceClient;
 import com.mercadopago.client.preference.PreferenceItemRequest;
 import com.mercadopago.client.preference.PreferenceRequest;
+import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
@@ -121,15 +122,16 @@ public class MercadoPagoService {
             Productos producto = transaccion.getProducto();
             if (producto.getVendido()) {
                 // en caso que se haya venido se reembolsa
-                System.out.println("🚫 Producto ya no está disponible, haciendo reembolso...");
+                System.out.println("Producto ya no está disponible, haciendo reembolso...");
                 reembolsarPago(paymentId);
                 transaccion.setEstado("reembolsado");
-            } else if (estado == "approved") {
-                // se setean los estados en caso que el producto este disponible
-                producto.setVendido(true);
-                productoRepository.save(producto);
-                transaccion.setEstado("Pago");
+                return;
             }
+
+            // se setean los estados en caso que el producto este disponible
+            producto.setVendido(true);
+            transaccion.setEstado("Pago");
+            productoRepository.save(producto);
             transaccionRepository.save(transaccion);
         } catch (Exception e) {
             System.out.println("Error al procesar webhook: " + e.getMessage());
@@ -139,18 +141,21 @@ public class MercadoPagoService {
     private void reembolsarPago(String paymentId) {
         try {
             MercadoPagoConfig.setAccessToken(accessToken);
-
+            System.out.println("Procesando reembolso para ID de pago: " + paymentId);
             // Obtener el pago con PaymentClient
             PaymentClient client = new PaymentClient();
             Payment payment = client.get(Long.parseLong(paymentId));
-
+            System.out.println("Estado del pago: " + payment.getStatus());
+            System.out.println("ExternalReference: " + payment.getExternalReference());
             // Ejecutar el reembolso
             PaymentRefund refundPayment = client.refund(payment.getId());
 
-            System.out.println("💸 Reembolso exitoso: " + refundPayment.getId());
+            System.out.println("Reembolso exitoso: " + refundPayment.getId());
 
+        } catch (MPApiException e) {
+            System.out.println("Error MercadoPago: " + e.getApiResponse().getContent());
         } catch (Exception e) {
-            System.out.println("❌ Error al procesar el reembolso: " + e.getMessage());
+            System.out.println("Error inesperado: " + e.getMessage());
         }
     }
 }
