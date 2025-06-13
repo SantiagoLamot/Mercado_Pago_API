@@ -12,6 +12,9 @@ CREATE TABLE productos (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
     precio DECIMAL(10,2) NOT NULL
+    reservado BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_reserva DATETIME DEFAULT CURRENT_TIMESTAMP,
+    vendido BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE transacciones (
@@ -32,7 +35,7 @@ INSERT INTO usuarios (nombre, email) VALUES
 
 
 INSERT INTO productos (nombre, precio) VALUES
-('Camiseta Boca Juniors 23/24', 28999.99),
+('Camiseta Boca Juniors 23/24', 1.99),
 ('Mate con escudo de Boca', 3999.50),
 ('Bufanda Azul y Oro', 4500.00),
 ('Yerba Mate Playadito 1kg', 1800.00),
