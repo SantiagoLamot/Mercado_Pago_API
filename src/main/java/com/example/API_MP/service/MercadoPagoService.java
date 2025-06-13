@@ -21,6 +21,7 @@ import com.mercadopago.client.preference.PreferenceClient;
 import com.mercadopago.client.preference.PreferenceItemRequest;
 import com.mercadopago.client.preference.PreferenceRequest;
 import com.mercadopago.resources.payment.Payment;
+import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
 
 @Service
@@ -70,7 +71,8 @@ public class MercadoPagoService {
         // Arma la preferencia
         PreferenceRequest preferenceRequest = PreferenceRequest.builder()
                 .items(List.of(item))
-                .externalReference(transaccionSave.getId().toString()) // Aca se manda el id de la transaccion para obtenerlo cuando se haga el pago
+                .externalReference(transaccionSave.getId().toString()) // Aca se manda el id de la transaccion para
+                                                                       // obtenerlo cuando se haga el pago
                 .build();
 
         // Se marca el producto como reservado
@@ -110,14 +112,45 @@ public class MercadoPagoService {
                 System.out.println("No se encontró externalReference (transactionId)");
                 return;
             }
-            // Se castea a Long se va a buscar la transaccion y se le seteaa el nuevo estado
+
+            // Se castea a Long se va a buscar la transaccion
             Long transactionId = Long.parseLong(externalReference);
             Transacciones transaccion = transaccionRepository.findById(transactionId)
                     .orElseThrow(() -> new RuntimeException("Transacción no encontrada: ID " + transactionId));
-            transaccion.setEstado(estado);
+            // Se chequea que no haya sido vendido anteriormente
+            Productos producto = transaccion.getProducto();
+            if (producto.getVendido()) {
+                // en caso que se haya venido se reembolsa
+                System.out.println("🚫 Producto ya no está disponible, haciendo reembolso...");
+                reembolsarPago(paymentId);
+                transaccion.setEstado("reembolsado");
+            } else if (estado == "approved") {
+                // se setean los estados en caso que el producto este disponible
+                producto.setVendido(true);
+                productoRepository.save(producto);
+                transaccion.setEstado("Pago");
+            }
             transaccionRepository.save(transaccion);
         } catch (Exception e) {
             System.out.println("Error al procesar webhook: " + e.getMessage());
+        }
+    }
+
+    private void reembolsarPago(String paymentId) {
+        try {
+            MercadoPagoConfig.setAccessToken(accessToken);
+
+            // Obtener el pago con PaymentClient
+            PaymentClient client = new PaymentClient();
+            Payment payment = client.get(Long.parseLong(paymentId));
+
+            // Ejecutar el reembolso
+            PaymentRefund refundPayment = client.refund(payment.getId());
+
+            System.out.println("💸 Reembolso exitoso: " + refundPayment.getId());
+
+        } catch (Exception e) {
+            System.out.println("❌ Error al procesar el reembolso: " + e.getMessage());
         }
     }
 }
