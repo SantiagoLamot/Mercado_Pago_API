@@ -148,11 +148,11 @@ public class MercadoPagoService {
                 transaccion.setEstado("reembolsado");
                 return;
             }
-            if (payment.getTransactionAmount() != BigDecimal.valueOf(producto.getPrecio())) {
-                System.out.println("El producto cambio el precio.");
-                reembolsarPago(paymentId);
-                return;
-            }
+            // if (payment.getTransactionAmount() != BigDecimal.valueOf(producto.getPrecio())) {
+            //     System.out.println("El producto cambio el precio.");
+            //     reembolsarPago(paymentId);
+            //     return;
+            // }
 
             // se setean los estados en caso que pase las validaciones
             if ("approved".equalsIgnoreCase(estado)) {
