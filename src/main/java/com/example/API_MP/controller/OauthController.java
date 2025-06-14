@@ -9,7 +9,7 @@ import com.example.API_MP.service.OauthService;
 
 
 @RestController
-@RequestMapping("oauth")
+@RequestMapping("/oauth")
 public class OauthController{
     OauthService oauthService;
 
@@ -17,9 +17,13 @@ public class OauthController{
         this.oauthService = os;
     }
 
-    @GetMapping("init")
-    public String getMethodName(@RequestParam String param) {
+    @GetMapping("/init")
+    public String init(@RequestParam String param) {
         return oauthService.UrlAutorizacion();
+    }
+    @GetMapping("/callback")
+    public String callback(@RequestParam String param) {
+        return "Llego al callback";
     }
     
 }
