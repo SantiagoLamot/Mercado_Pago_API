@@ -1,5 +1,6 @@
 package com.example.API_MP.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,12 +19,13 @@ public class OauthController{
     }
 
     @GetMapping("/init")
-    public String init(@RequestParam String param) {
+    public String init() {
         return oauthService.UrlAutorizacion();
     }
     @GetMapping("/callback")
-    public String callback(@RequestParam String param) {
-        return "Llego al callback";
+    public ResponseEntity<String> callback(@RequestParam("code") String code) {
+        String resultado = oauthService.obtenerAccessToken(code);
+        return ResponseEntity.ok(resultado);
     }
     
 }
