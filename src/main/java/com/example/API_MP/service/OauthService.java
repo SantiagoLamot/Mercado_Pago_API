@@ -48,11 +48,11 @@ public class OauthService {
                 String.class
         );
 
-        // 👇 Acá podrías parsear el JSON para extraer y guardar access_token, user_id, etc.
-        System.out.println("🔐 Respuesta de Mercado Pago:");
+        //FALTA GUARDAR EN BASE DE DATO TOKEN Y REF TOKEN
+        System.out.println("Respuesta de Mercado Pago:");
         System.out.println(response.getBody());
 
-        return response.getBody(); // en producción, parsear y guardar en DB
+        return response.getBody();
     }
     
 }
