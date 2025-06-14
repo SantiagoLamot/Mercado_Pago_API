@@ -2,6 +2,7 @@ package com.example.API_MP.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,9 @@ public class MercadoPagoService {
         this.usuariosRepository = u;
     }
 
+    
+    // ===============CREAR PREFERENCIA===============
+
     public String crearPreferencia(ProductoRequestDTO p) throws Exception {
         // Se busca el producto recibido
         Productos producto = productoRepository.findById(p.getId())
@@ -69,11 +73,23 @@ public class MercadoPagoService {
         Transacciones transaccion = new Transacciones("Pendiente", usuarioComprador, producto);
         Transacciones transaccionSave = transaccionRepository.save(transaccion);
 
+        // Tiempo actual
+        OffsetDateTime now = OffsetDateTime.now();
+
+        // Tiempo de expiración: 2 minutos desde ahora
+        OffsetDateTime expirationFrom = now;
+        OffsetDateTime expirationTo = now.plusMinutes(2);
+
         // Arma la preferencia
         PreferenceRequest preferenceRequest = PreferenceRequest.builder()
                 .items(List.of(item))
-                .externalReference(transaccionSave.getId().toString()) // Aca se manda el id de la transaccion para
-                                                                       // obtenerlo cuando se haga el pago
+                // Aca se manda el id de la transaccion para obtenerlo cuando se haga el pago
+                .externalReference(transaccionSave.getId().toString())
+                // Aca se setean datos para que la URL expire y no sea comprada mas alla de lo
+                // que dura la reserva
+                .expires(true)
+                .expirationDateFrom(expirationFrom)
+                .expirationDateTo(expirationTo)
                 .build();
 
         // Se marca el producto como reservado
@@ -89,6 +105,9 @@ public class MercadoPagoService {
         return preference.getInitPoint();
     }
 
+
+    // =============== MANEJAR WEBHOOK ===============
+
     public void procesarWebhook(WebhookDTO webhook) {
         if (!"payment".equalsIgnoreCase(webhook.getType())) {
             System.out.println("Webhook ignorado: tipo no soportado " + webhook.getType());
@@ -103,23 +122,25 @@ public class MercadoPagoService {
             PaymentClient client = new PaymentClient();
             Payment payment = client.get(Long.parseLong(paymentId));
 
-            // obtengo el stado del pafo
+            // Obtengo el estado de la transaccion
             String estado = payment.getStatus();
 
-            // Obtengo el ID del la transaccion para cambiuarte el estado
+            // Obtengo el ID del la transaccion y luego la transaccion completa
             String externalReference = payment.getExternalReference();
-
-            if (externalReference == null) {
-                System.out.println("No se encontró externalReference (transactionId)");
-                return;
-            }
-
-            // Se castea a Long se va a buscar la transaccion
             Long transactionId = Long.parseLong(externalReference);
             Transacciones transaccion = transaccionRepository.findById(transactionId)
                     .orElseThrow(() -> new RuntimeException("Transacción no encontrada: ID " + transactionId));
-            // Se chequea que no haya sido vendido anteriormente
+
+            // Obtengo el producto de la transaccion
             Productos producto = transaccion.getProducto();
+
+            // Se verifica que se encontro el id de Transaccion
+            if (externalReference == null) {
+                System.out.println("No se encontró externalReference (transactionId)");
+                reembolsarPago(paymentId);
+                return;
+            }
+            // Se chequea que no haya sido vendido anteriormente
             if (producto.getVendido()) {
                 // en caso que se haya venido se reembolsa
                 System.out.println("Producto ya no está disponible, haciendo reembolso...");
@@ -127,12 +148,19 @@ public class MercadoPagoService {
                 transaccion.setEstado("reembolsado");
                 return;
             }
+            if (payment.getTransactionAmount() != BigDecimal.valueOf(producto.getPrecio())) {
+                System.out.println("El producto cambio el precio.");
+                reembolsarPago(paymentId);
+                return;
+            }
 
-            // se setean los estados en caso que el producto este disponible
-            producto.setVendido(true);
-            transaccion.setEstado("Pago");
-            productoRepository.save(producto);
-            transaccionRepository.save(transaccion);
+            // se setean los estados en caso que pase las validaciones
+            if ("approved".equalsIgnoreCase(estado)) {
+                producto.setVendido(true);
+                transaccion.setEstado("Pago");
+                productoRepository.save(producto);
+                transaccionRepository.save(transaccion);
+            }
         } catch (Exception e) {
             System.out.println("Error al procesar webhook: " + e.getMessage());
         }
