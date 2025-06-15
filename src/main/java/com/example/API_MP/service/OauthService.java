@@ -1,5 +1,8 @@
 package com.example.API_MP.service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -10,25 +13,51 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.API_MP.entidades.OauthToken;
+import com.example.API_MP.entidades.OauthTokenRequestDTO;
+import com.example.API_MP.entidades.StateOauth;
+import com.example.API_MP.entidades.Usuarios;
+import com.example.API_MP.repository.ProductosRepository;
+import com.example.API_MP.repository.StateOauthRepository;
+import com.example.API_MP.repository.UsuariosRepository;
+
 @Service
 public class OauthService {
+
     @Value("${clientId}")
     String clientId;
-    
+
     @Value("${redirectUrl}")
     String redirectUrl;
 
     @Value("${clientSecret}")
     String clientSecret;
 
+    private final StateOauthRepository stateRepository;
+    private final UsuariosRepository usuariosRepository;
 
-    public String UrlAutorizacion() {
-        return "https://auth.mercadopago.com.ar/authorization?response_type=code&client_id=" + clientId + "&redirect_uri=" + redirectUrl;
-
+    public OauthService(StateOauthRepository stateRepository, ProductosRepository productosRepository,
+            UsuariosRepository usuariosRepository) {
+        this.stateRepository = stateRepository;
+        this.usuariosRepository = usuariosRepository;
     }
 
+    public String UrlAutorizacion() {
+        Long idUsuarioLogueado = new Long(1); // ACA OBTENER EL ID DEL USUARIO LOGUEADO
+        String state = UUID.randomUUID().toString();
+        guardarStateOauth(idUsuarioLogueado, state);
+        return "https://auth.mercadopago.com.ar/authorization?response_type=code" +
+                "&client_id=" + clientId +
+                "&redirect_uri=" + redirectUrl +
+                "state" + state;
+    }
 
-    public String obtenerAccessToken(String code) {
+    private void guardarStateOauth(Long id, String state) {
+        StateOauth entity = new StateOauth(id, state);
+        stateRepository.save(entity);
+    }
+
+    public String obtenerAccessToken(String code, String state) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -42,17 +71,33 @@ public class OauthService {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.postForEntity(
+        ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(
                 "https://api.mercadopago.com/oauth/token",
                 request,
-                String.class
-        );
+                OauthTokenRequestDTO.class);
 
-        //FALTA GUARDAR EN BASE DE DATO TOKEN Y REF TOKEN
-        System.out.println("Respuesta de Mercado Pago:");
-        System.out.println(response.getBody());
-
-        return response.getBody();
+        guardarToken(response.getBody(), obtenerUsuario(state));
+        
+        return response.toString();
     }
-    
+
+    private Usuarios obtenerUsuario(String state) {
+        StateOauth stateOauth = stateRepository.findByState(state)
+                .orElseThrow(() -> new RuntimeException("state no encontrado"));
+
+        Usuarios usuario = usuariosRepository.findById(stateOauth.getIdUsuario())
+                .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
+        return usuario;
+    }
+
+    public void guardarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
+        OauthToken token = new OauthToken();
+        token.setAccessToken(oauthTokenDTO.getAccessToken());
+        token.setRefreshToken(oauthTokenDTO.getRefreshToken());
+        token.setPublicKey(oauthTokenDTO.getPublicKey());
+        token.setUserId(oauthTokenDTO.getUserId());
+        token.setLiveMode(oauthTokenDTO.isLiveMode());
+        token.setExpiresAt(LocalDateTime.now().plusSeconds(oauthTokenDTO.getExpiresIn()));
+        token.setUsuario(usuario);
+    }
 }
