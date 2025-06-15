@@ -23,8 +23,9 @@ public class OauthController{
         return oauthService.UrlAutorizacion();
     }
     @GetMapping("/callback")
-    public ResponseEntity<String> callback(@RequestParam("code") String code) {
-        String resultado = oauthService.obtenerAccessToken(code);
+    public ResponseEntity<String> callback(@RequestParam("code") String code,
+    @RequestParam("state") String state) {
+        String resultado = oauthService.obtenerAccessToken(code, state);
         return ResponseEntity.ok(resultado);
     }
     
