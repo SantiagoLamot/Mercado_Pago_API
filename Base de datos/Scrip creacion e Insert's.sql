@@ -11,7 +11,7 @@ CREATE TABLE usuarios (
 CREATE TABLE productos (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
-    precio DECIMAL(10,2) NOT NULL
+    precio DECIMAL(10,2) NOT NULL,
     reservado BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_reserva DATETIME DEFAULT CURRENT_TIMESTAMP,
     vendido BOOLEAN NOT NULL DEFAULT FALSE
@@ -27,7 +27,27 @@ CREATE TABLE transacciones (
     FOREIGN KEY (producto_id) REFERENCES productos(id)
 );
 
+CREATE TABLE oauth_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    access_token VARCHAR(500) NOT NULL,
+    refresh_token VARCHAR(500) NOT NULL,
+    public_key VARCHAR(255),
+    user_id BIGINT,-- ID del vendedor en MP
+    expires_at DATETIME NOT NULL,
+    live_mode BOOLEAN DEFAULT false,-- Si es modo producción o prueba
+    
+    usuario_id BIGINT NOT NULL,-- id de usuario de la aplicacion propia no mp
+    CONSTRAINT fk_oauth_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
+);
 
+CREATE TABLE state_oauth (
+    state VARCHAR(255) PRIMARY KEY,
+    usuario_id BIGINT NOT NULL,
+    creado DATETIME NOT NULL
+);
 INSERT INTO usuarios (nombre, email) VALUES
 ('Santiago Lamot', 'santilamot@gmail.com'),
 ('Bautista Lamot', 'bauti.lamot@gmail.com'),
