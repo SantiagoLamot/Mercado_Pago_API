@@ -2,7 +2,6 @@ package com.example.API_MP.entidades;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,24 +11,23 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 @Data
-@Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
 public class StateOauth {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
     
     @NotNull
-    @Column(name= "id_usuario")
-    Long idUsuario;
+    Long usuarioId;
     
     @NotNull
     String state;
     LocalDateTime creado = LocalDateTime.now();
     
-    public StateOauth(Long id, String state){
-        this.idUsuario = id;
+    public StateOauth(Long usuarioId, String state){
+        this.usuarioId = usuarioId;
         this.state = state;
         this.creado = LocalDateTime.now();
     }
