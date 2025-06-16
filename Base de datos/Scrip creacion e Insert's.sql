@@ -44,6 +44,7 @@ CREATE TABLE oauth_tokens (
 );
 
 CREATE TABLE state_oauth (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     state VARCHAR(255) PRIMARY KEY,
     usuario_id BIGINT NOT NULL,
     creado DATETIME NOT NULL
