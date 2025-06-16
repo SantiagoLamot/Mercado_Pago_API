@@ -49,11 +49,11 @@ public class OauthService {
         return "https://auth.mercadopago.com.ar/authorization?response_type=code" +
                 "&client_id=" + clientId +
                 "&redirect_uri=" + redirectUrl +
-                "state" + state;
+                "&state" + state;
     }
 
-    private void guardarStateOauth(Long id, String state) {
-        StateOauth entity = new StateOauth(id, state);
+    private void guardarStateOauth(Long idUsuario, String state) {
+        StateOauth entity = new StateOauth(idUsuario, state);
         stateRepository.save(entity);
     }
 
@@ -85,7 +85,7 @@ public class OauthService {
         StateOauth stateOauth = stateRepository.findByState(state)
                 .orElseThrow(() -> new RuntimeException("state no encontrado"));
 
-        Usuarios usuario = usuariosRepository.findById(stateOauth.getIdUsuario())
+        Usuarios usuario = usuariosRepository.findById(stateOauth.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
         return usuario;
     }
