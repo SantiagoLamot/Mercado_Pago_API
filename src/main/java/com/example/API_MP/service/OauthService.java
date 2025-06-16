@@ -17,6 +17,7 @@ import com.example.API_MP.entidades.OauthToken;
 import com.example.API_MP.entidades.OauthTokenRequestDTO;
 import com.example.API_MP.entidades.StateOauth;
 import com.example.API_MP.entidades.Usuarios;
+import com.example.API_MP.repository.OauthTokenRepository;
 import com.example.API_MP.repository.ProductosRepository;
 import com.example.API_MP.repository.StateOauthRepository;
 import com.example.API_MP.repository.UsuariosRepository;
@@ -35,11 +36,13 @@ public class OauthService {
 
     private final StateOauthRepository stateRepository;
     private final UsuariosRepository usuariosRepository;
+    private final OauthTokenRepository oauthRepository;
 
     public OauthService(StateOauthRepository stateRepository, ProductosRepository productosRepository,
-            UsuariosRepository usuariosRepository) {
+            UsuariosRepository usuariosRepository, OauthTokenRepository oauthRepository) {
         this.stateRepository = stateRepository;
         this.usuariosRepository = usuariosRepository;
+        this.oauthRepository = oauthRepository;
     }
 
     public String UrlAutorizacion() {
@@ -49,7 +52,7 @@ public class OauthService {
         return "https://auth.mercadopago.com.ar/authorization?response_type=code" +
                 "&client_id=" + clientId +
                 "&redirect_uri=" + redirectUrl +
-                "&state" + state;
+                "&state=" + state;
     }
 
     private void guardarStateOauth(Long idUsuario, String state) {
@@ -99,5 +102,7 @@ public class OauthService {
         token.setLiveMode(oauthTokenDTO.isLiveMode());
         token.setExpiresAt(LocalDateTime.now().plusSeconds(oauthTokenDTO.getExpiresIn()));
         token.setUsuario(usuario);
+        
+        oauthRepository.save(token);
     }
 }
