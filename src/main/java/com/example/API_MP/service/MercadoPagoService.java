@@ -56,7 +56,7 @@ public class MercadoPagoService {
         // Inicializa config
         MercadoPagoConfig.setAccessToken(accessToken);
 
-        // Crea el ítem
+        // Crea el articulo
         PreferenceItemRequest item = PreferenceItemRequest.builder()
                 .title(producto.getNombre())
                 .quantity(1)
