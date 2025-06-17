@@ -18,9 +18,7 @@ import com.example.API_MP.entidades.OauthTokenRequestDTO;
 import com.example.API_MP.entidades.StateOauth;
 import com.example.API_MP.entidades.Usuarios;
 import com.example.API_MP.repository.OauthTokenRepository;
-import com.example.API_MP.repository.ProductosRepository;
 import com.example.API_MP.repository.StateOauthRepository;
-import com.example.API_MP.repository.UsuariosRepository;
 
 @Service
 public class OauthService {
@@ -35,29 +33,27 @@ public class OauthService {
     String clientSecret;
 
     private final StateOauthRepository stateRepository;
-    private final UsuariosRepository usuariosRepository;
+    private final UsuariosService usuariosService;
     private final OauthTokenRepository oauthRepository;
+    private final StateOauthService stateOauthService;
 
-    public OauthService(StateOauthRepository stateRepository, ProductosRepository productosRepository,
-            UsuariosRepository usuariosRepository, OauthTokenRepository oauthRepository) {
+    public OauthService(StateOauthRepository stateRepository, UsuariosService usuariosService, OauthTokenRepository oauthRepository, StateOauthService stateOauthService) {
         this.stateRepository = stateRepository;
-        this.usuariosRepository = usuariosRepository;
+        this.usuariosService = usuariosService;
         this.oauthRepository = oauthRepository;
+        this.stateOauthService = stateOauthService;
     }
 
     public String UrlAutorizacion() {
-        Long idUsuarioLogueado = new Long(1); // ACA OBTENER EL ID DEL USUARIO LOGUEADO
+        Long idUsuarioLogueado = usuariosService.obtenerUsuariosPorId(1L)// ACA OBTENER EL ID DEL USUARIO LOGUEADO
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"))
+                .getId();
         String state = UUID.randomUUID().toString();
-        guardarStateOauth(idUsuarioLogueado, state);
+        stateOauthService.guardarStateOauth(idUsuarioLogueado, state);
         return "https://auth.mercadopago.com.ar/authorization?response_type=code" +
                 "&client_id=" + clientId +
                 "&redirect_uri=" + redirectUrl +
                 "&state=" + state;
-    }
-
-    private void guardarStateOauth(Long idUsuario, String state) {
-        StateOauth entity = new StateOauth(idUsuario, state);
-        stateRepository.save(entity);
     }
 
     public String obtenerAccessToken(String code, String state) {
@@ -80,7 +76,7 @@ public class OauthService {
                 OauthTokenRequestDTO.class);
 
         guardarToken(response.getBody(), obtenerUsuario(state));
-        
+
         return response.toString();
     }
 
@@ -102,7 +98,7 @@ public class OauthService {
         token.setLiveMode(oauthTokenDTO.isLiveMode());
         token.setExpiresAt(LocalDateTime.now().plusSeconds(oauthTokenDTO.getExpiresIn()));
         token.setUsuario(usuario);
-        
+
         oauthRepository.save(token);
     }
 }
