@@ -15,10 +15,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.API_MP.entidades.OauthToken;
 import com.example.API_MP.entidades.OauthTokenRequestDTO;
-import com.example.API_MP.entidades.StateOauth;
 import com.example.API_MP.entidades.Usuarios;
 import com.example.API_MP.repository.OauthTokenRepository;
-import com.example.API_MP.repository.StateOauthRepository;
 
 @Service
 public class OauthService {
@@ -32,13 +30,11 @@ public class OauthService {
     @Value("${clientSecret}")
     String clientSecret;
 
-    private final StateOauthRepository stateRepository;
     private final UsuariosService usuariosService;
     private final OauthTokenRepository oauthRepository;
     private final StateOauthService stateOauthService;
 
-    public OauthService(StateOauthRepository stateRepository, UsuariosService usuariosService, OauthTokenRepository oauthRepository, StateOauthService stateOauthService) {
-        this.stateRepository = stateRepository;
+    public OauthService(UsuariosService usuariosService, OauthTokenRepository oauthRepository, StateOauthService stateOauthService) {
         this.usuariosService = usuariosService;
         this.oauthRepository = oauthRepository;
         this.stateOauthService = stateOauthService;
@@ -75,18 +71,9 @@ public class OauthService {
                 request,
                 OauthTokenRequestDTO.class);
 
-        guardarToken(response.getBody(), obtenerUsuario(state));
+        guardarToken(response.getBody(), usuariosService.obtenerUsuarioPorState(state));
 
         return response.toString();
-    }
-
-    private Usuarios obtenerUsuario(String state) {
-        StateOauth stateOauth = stateRepository.findByState(state)
-                .orElseThrow(() -> new RuntimeException("state no encontrado"));
-
-        Usuarios usuario = usuariosRepository.findById(stateOauth.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
-        return usuario;
     }
 
     public void guardarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
