@@ -6,11 +6,14 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.API_MP.entidades.OauthToken;
@@ -34,7 +37,8 @@ public class OauthService {
     private final OauthTokenRepository oauthRepository;
     private final StateOauthService stateOauthService;
 
-    public OauthService(UsuariosService usuariosService, OauthTokenRepository oauthRepository, StateOauthService stateOauthService) {
+    public OauthService(UsuariosService usuariosService, OauthTokenRepository oauthRepository,
+            StateOauthService stateOauthService) {
         this.usuariosService = usuariosService;
         this.oauthRepository = oauthRepository;
         this.stateOauthService = stateOauthService;
@@ -89,9 +93,29 @@ public class OauthService {
         oauthRepository.save(token);
     }
 
-    public String obtenerAccessTokenPorId(Long id){
+    public String obtenerAccessTokenPorId(Long id) {
         return oauthRepository.findByUsuarioId(id)
-            .orElseThrow(()-> new RuntimeException("no se encontro access token"))
-            .getAccessToken();
+                .orElseThrow(() -> new RuntimeException("no se encontro access token"))
+                .getAccessToken();
+    }
+
+    public boolean AccessTokenValido(String accessToken) {
+        String url = "https://api.mercadopago.com/users/me";
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED || e.getStatusCode() == HttpStatus.FORBIDDEN) {
+                return false;
+            }
+            return false;
+        }
     }
 }
