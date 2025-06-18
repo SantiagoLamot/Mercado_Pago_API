@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.API_MP.entidades.ProductoRequestDTO;
@@ -29,17 +28,19 @@ import com.mercadopago.resources.preference.Preference;
 @Service
 public class MercadoPagoService {
 
-    @Value("${mercadopago.access-token}")
-    String accessToken;
+    //@Value("${mercadopago.access-token}")
+    //String accessToken;
 
     private final ProductosRepository productoRepository;
     private final TransaccionesRepository transaccionRepository;
     private final UsuariosRepository usuariosRepository;
+    private final OauthService oauthService;
 
-    public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u) {
+    public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u, OauthService oauthService) {
         this.productoRepository = p;
         this.transaccionRepository = t;
         this.usuariosRepository = u;
+        this.oauthService = oauthService;
     }
 
     
@@ -53,10 +54,13 @@ public class MercadoPagoService {
         if (!producto.estaDisponible()) {
             throw new RuntimeException("Producto vendido o reservado, prueba mas tarde");
         }
+        //me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
+        String accessToken = oauthService.obtenerAccessTokenPorId(1L);
+
         // Inicializa config
         MercadoPagoConfig.setAccessToken(accessToken);
 
-        // Crea el articulo
+        // Crea el ítem
         PreferenceItemRequest item = PreferenceItemRequest.builder()
                 .title(producto.getNombre())
                 .quantity(1)
@@ -68,8 +72,7 @@ public class MercadoPagoService {
         Usuarios usuarioComprador = usuariosRepository.findById(new Long("1"))
                 .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
 
-        // Se crea la transaccion en la base de datos y se obtiene la misma guardada con
-        // su id
+        // Se crea la transaccion en la base de datos y se obtiene id de la misma
         Transacciones transaccion = new Transacciones("Pendiente", usuarioComprador, producto);
         Transacciones transaccionSave = transaccionRepository.save(transaccion);
 
@@ -134,17 +137,20 @@ public class MercadoPagoService {
             // Obtengo el producto de la transaccion
             Productos producto = transaccion.getProducto();
 
+            //Obtengo el accessToken del vendedor por si hay que rembolsar
+            String accessToken = oauthService.obtenerAccessTokenPorId(1L);
+
             // Se verifica que se encontro el id de Transaccion
             if (externalReference == null) {
                 System.out.println("No se encontró externalReference (transactionId)");
-                reembolsarPago(paymentId);
+                reembolsarPago(paymentId, accessToken);
                 return;
             }
             // Se chequea que no haya sido vendido anteriormente
             if (producto.getVendido()) {
                 // en caso que se haya venido se reembolsa
                 System.out.println("Producto ya no está disponible, haciendo reembolso...");
-                reembolsarPago(paymentId);
+                reembolsarPago(paymentId, accessToken);
                 transaccion.setEstado("reembolsado");
                 return;
             }
@@ -166,7 +172,7 @@ public class MercadoPagoService {
         }
     }
 
-    private void reembolsarPago(String paymentId) {
+    private void reembolsarPago(String paymentId, String accessToken) {
         try {
             MercadoPagoConfig.setAccessToken(accessToken);
             System.out.println("Procesando reembolso para ID de pago: " + paymentId);
