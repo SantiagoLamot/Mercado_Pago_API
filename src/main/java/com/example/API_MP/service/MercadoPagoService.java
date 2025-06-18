@@ -56,7 +56,12 @@ public class MercadoPagoService {
         }
         //me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
         String accessToken = oauthService.obtenerAccessTokenPorId(1L);
-
+        
+        // Verifico que no este vencido ni revocado
+        if(!oauthService.AccessTokenValido(accessToken)){
+            throw new RuntimeException("Access token vencido o revocado por el vendedor");
+        }
+        
         // Inicializa config
         MercadoPagoConfig.setAccessToken(accessToken);
 
