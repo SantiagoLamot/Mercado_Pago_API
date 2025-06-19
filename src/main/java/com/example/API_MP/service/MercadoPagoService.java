@@ -40,8 +40,8 @@ import com.mercadopago.resources.preference.Preference;
 @Service
 public class MercadoPagoService {
 
-    //@Value("${mercadopago.access-token}")
-    //String accessToken;
+    // @Value("${mercadopago.access-token}")
+    // String accessToken;
     @Value("${clientId}")
     String clientId;
 
@@ -53,14 +53,14 @@ public class MercadoPagoService {
     private final UsuariosRepository usuariosRepository;
     private final OauthService oauthService;
 
-    public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u, OauthService oauthService) {
+    public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u,
+            OauthService oauthService) {
         this.productoRepository = p;
         this.transaccionRepository = t;
         this.usuariosRepository = u;
         this.oauthService = oauthService;
     }
 
-    
     // ===============CREAR PREFERENCIA===============
 
     public String crearPreferencia(ProductoRequestDTO p) throws Exception {
@@ -71,14 +71,14 @@ public class MercadoPagoService {
         if (!producto.estaDisponible()) {
             throw new RuntimeException("Producto vendido o reservado, prueba mas tarde");
         }
-        //me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
+        // me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
         String accessToken = oauthService.obtenerAccessTokenPorId(1L);
-        
+
         // Verifico que no este vencido ni revocado
-        if(!oauthService.AccessTokenValido(accessToken)){
+        if (!oauthService.AccessTokenValido(accessToken)) {
             throw new RuntimeException("Access token vencido o revocado por el vendedor");
         }
-        
+
         // Inicializa config
         MercadoPagoConfig.setAccessToken(accessToken);
 
@@ -130,7 +130,6 @@ public class MercadoPagoService {
         return preference.getInitPoint();
     }
 
-
     // =============== MANEJAR WEBHOOK ===============
 
     public void procesarWebhook(WebhookDTO webhook) {
@@ -159,7 +158,7 @@ public class MercadoPagoService {
             // Obtengo el producto de la transaccion
             Productos producto = transaccion.getProducto();
 
-            //Obtengo el accessToken del vendedor por si hay que rembolsar
+            // Obtengo el accessToken del vendedor por si hay que rembolsar
             String accessToken = oauthService.obtenerAccessTokenPorId(1L);
 
             // Se verifica que se encontro el id de Transaccion
@@ -176,10 +175,11 @@ public class MercadoPagoService {
                 transaccion.setEstado("reembolsado");
                 return;
             }
-            // if (payment.getTransactionAmount() != BigDecimal.valueOf(producto.getPrecio())) {
-            //     System.out.println("El producto cambio el precio.");
-            //     reembolsarPago(paymentId);
-            //     return;
+            // if (payment.getTransactionAmount() !=
+            // BigDecimal.valueOf(producto.getPrecio())) {
+            // System.out.println("El producto cambio el precio.");
+            // reembolsarPago(paymentId);
+            // return;
             // }
 
             // se setean los estados en caso que pase las validaciones
@@ -216,30 +216,30 @@ public class MercadoPagoService {
     }
 
     public OauthTokenRequestDTO refrescarToken(String refreshToken) {
-    try {
-        RestTemplate restTemplate = new RestTemplate();
+        try {
+            RestTemplate restTemplate = new RestTemplate();
 
-        String url = "https://api.mercadopago.com/oauth/token";
+            String url = "https://api.mercadopago.com/oauth/token";
 
-        Map<String, String> body = new HashMap<>();
-        body.put("grant_type", "refresh_token");
-        body.put("client_id", clientId);
-        body.put("client_secret", clientSecret);
-        body.put("refresh_token", refreshToken);
+            Map<String, String> body = new HashMap<>();
+            body.put("grant_type", "refresh_token");
+            body.put("client_id", clientId);
+            body.put("client_secret", clientSecret);
+            body.put("refresh_token", refreshToken);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(url, request, OauthTokenRequestDTO.class);
+            ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(url, request, OauthTokenRequestDTO.class);
 
-        return response.getBody();
-    } catch (HttpClientErrorException e) {
-        if (e.getStatusCode() == HttpStatus.BAD_REQUEST || e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-            throw new TokenRevocadoException("El refresh token fue revocado o no es válido");
+            return response.getBody();
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST || e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                throw new TokenRevocadoException("El refresh token fue revocado o no es válido");
+            }
+            throw e;
         }
-        throw e;
     }
-}
 }
