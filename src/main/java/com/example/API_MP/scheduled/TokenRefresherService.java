@@ -15,16 +15,15 @@ import com.example.API_MP.service.OauthService;
 public class TokenRefresherService {
     private final MercadoPagoService mercadoPagoService;
     private final OauthService oauthService;
+
     public TokenRefresherService(MercadoPagoService mercadoPagoService, OauthService oauthService){
         this.mercadoPagoService = mercadoPagoService;
         this.oauthService = oauthService;
     }
 
-    
     @Scheduled(fixedRate = 3600000) // cada 1 hora (en milisegundos)
     public void refrescarTokens() {
-        List<OauthToken> tokens = usuariosRepository.findAllConTokens(); // FALTA OBTENER TOKEN DE USUARIOS VENDEDORES
-
+        List<OauthToken> tokens = oauthService.obtenerTokenDeUsuariosVendedores();
         for (OauthToken token : tokens) {
             if (tokenExpirado(token)) {
                 try {
@@ -38,6 +37,6 @@ public class TokenRefresherService {
     }
 
     private boolean tokenExpirado(OauthToken token) {
-        return usuario.getFechaExpiracion().isBefore(LocalDateTime.now().plusMinutes(5)); // margen de seguridad
+        return token.getExpiresAt().isBefore(LocalDateTime.now().plusMinutes(11)); // margen de seguridad
     }
 }
