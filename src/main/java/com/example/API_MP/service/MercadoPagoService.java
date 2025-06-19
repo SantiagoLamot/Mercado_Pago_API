@@ -3,15 +3,27 @@ package com.example.API_MP.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
+import com.example.API_MP.entidades.OauthTokenRequestDTO;
 import com.example.API_MP.entidades.ProductoRequestDTO;
 import com.example.API_MP.entidades.Productos;
 import com.example.API_MP.entidades.Transacciones;
 import com.example.API_MP.entidades.Usuarios;
 import com.example.API_MP.entidades.WebhookDTO;
+import com.example.API_MP.excepciones.TokenRevocadoException;
 import com.example.API_MP.repository.ProductosRepository;
 import com.example.API_MP.repository.TransaccionesRepository;
 import com.example.API_MP.repository.UsuariosRepository;
@@ -30,6 +42,11 @@ public class MercadoPagoService {
 
     //@Value("${mercadopago.access-token}")
     //String accessToken;
+    @Value("${clientId}")
+    String clientId;
+
+    @Value("${clientSecret}")
+    String clientSecret;
 
     private final ProductosRepository productoRepository;
     private final TransaccionesRepository transaccionRepository;
@@ -197,4 +214,32 @@ public class MercadoPagoService {
             System.out.println("Error inesperado: " + e.getMessage());
         }
     }
+
+    public OauthTokenRequestDTO refrescarToken(String refreshToken) {
+    try {
+        RestTemplate restTemplate = new RestTemplate();
+
+        String url = "https://api.mercadopago.com/oauth/token";
+
+        Map<String, String> body = new HashMap<>();
+        body.put("grant_type", "refresh_token");
+        body.put("client_id", clientId);
+        body.put("client_secret", clientSecret);
+        body.put("refresh_token", refreshToken);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(url, request, OauthTokenRequestDTO.class);
+
+        return response.getBody();
+    } catch (HttpClientErrorException e) {
+        if (e.getStatusCode() == HttpStatus.BAD_REQUEST || e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            throw new TokenRevocadoException("El refresh token fue revocado o no es válido");
+        }
+        throw e;
+    }
+}
 }
