@@ -1,6 +1,7 @@
 package com.example.API_MP.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -117,5 +118,9 @@ public class OauthService {
             }
             return false;
         }
+    }
+
+    public List<OauthToken> obtenerTokenDeUsuariosVendedores(){
+        return oauthRepository.findByUsuario_VendedorTrue();
     }
 }
