@@ -21,6 +21,6 @@ public class StateOauthService {
     public Long obtenerIdUsuarioPorState(String state) {
         return stateOauthRepository.findByState(state)
                 .orElseThrow(() -> new RuntimeException("state no encontrado"))
-                .getId();
+                .getUsuarioId();
     }
 }
