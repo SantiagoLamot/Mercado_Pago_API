@@ -23,6 +23,7 @@ public class TokenRefresherService {
 
     @Scheduled(fixedRate = 3600000) // cada 1 hora (en milisegundos)
     public void refrescarTokens() {
+        System.out.println("Se ejecuto scheduler token refresh");
         List<OauthToken> tokens = oauthService.obtenerTokenDeUsuariosVendedores();
         for (OauthToken token : tokens) {
             if (tokenExpirado(token)) {
