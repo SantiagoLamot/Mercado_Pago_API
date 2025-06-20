@@ -82,7 +82,8 @@ public class OauthService {
     }
 
     public void guardarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
-        OauthToken token = new OauthToken();
+        OauthToken token = oauthRepository.findByUsuarioId(usuario.getId())
+            .orElseThrow(()-> new RuntimeException("Error al obtener token para guardar nuevo"));
         token.setAccessToken(oauthTokenDTO.getAccessToken());
         token.setRefreshToken(oauthTokenDTO.getRefreshToken());
         token.setPublicKey(oauthTokenDTO.getPublicKey());
