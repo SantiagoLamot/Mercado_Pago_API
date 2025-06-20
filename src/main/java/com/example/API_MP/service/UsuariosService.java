@@ -23,6 +23,7 @@ public class UsuariosService {
     }
 
     public Usuarios obtenerUsuarioPorState(String state){
+        System.out.println("State recibido: "+state);
         Long id = stateOauthService.obtenerIdUsuarioPorState(state);
         return usuariosRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
