@@ -20,7 +20,6 @@ public class ProductoScheduler {
 
     @Scheduled(fixedRate = 60000) // Ejecuta cada 1 minuto
     public void liberarProductosReservados() {
-        System.out.println("Se ejecuto scheduler :)");
         List<Productos> productos = productoRepository.findByReservadoTrue();
 
         for (Productos p : productos) {
