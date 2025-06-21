@@ -10,6 +10,7 @@ import com.example.API_MP.entidades.OauthToken;
 import com.example.API_MP.entidades.OauthTokenRequestDTO;
 import com.example.API_MP.service.MercadoPagoService;
 import com.example.API_MP.service.OauthService;
+import com.example.API_MP.util.EncriptadoUtil;
 
 @Service
 public class TokenRefresherService {
@@ -28,10 +29,11 @@ public class TokenRefresherService {
         for (OauthToken token : tokens) {
             if (tokenExpirado(token)) {
                 try {
-                    OauthTokenRequestDTO nuevoToken = mercadoPagoService.refrescarToken(token.getRefreshToken());
+                    OauthTokenRequestDTO nuevoToken = mercadoPagoService.refrescarToken(EncriptadoUtil.desencriptar(token.getRefreshToken()));
                     oauthService.guardarToken(nuevoToken, token.getUsuario());
                 } catch (Exception e) {
                     System.err.println("Error actualizando token para usuario " + token.getUsuario().getNombre());
+                    System.err.println(e.getMessage());
                 }
             }
         }
