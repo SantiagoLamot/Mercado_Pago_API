@@ -21,6 +21,7 @@ import com.example.API_MP.entidades.OauthToken;
 import com.example.API_MP.entidades.OauthTokenRequestDTO;
 import com.example.API_MP.entidades.Usuarios;
 import com.example.API_MP.repository.OauthTokenRepository;
+import com.example.API_MP.util.EncriptadoUtil;
 
 @Service
 public class OauthService {
@@ -84,8 +85,8 @@ public class OauthService {
     public void guardarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
         OauthToken token = oauthRepository.findByUsuarioId(usuario.getId())
             .orElseThrow(()-> new RuntimeException("Error al obtener token para guardar nuevo"));
-        token.setAccessToken(oauthTokenDTO.getAccessToken());
-        token.setRefreshToken(oauthTokenDTO.getRefreshToken());
+        token.setAccessToken(EncriptadoUtil.encriptar(oauthTokenDTO.getAccessToken()));
+        token.setRefreshToken(EncriptadoUtil.encriptar(oauthTokenDTO.getRefreshToken()));
         token.setPublicKey(oauthTokenDTO.getPublicKey());
         token.setUserId(oauthTokenDTO.getUserId());
         token.setLiveMode(oauthTokenDTO.isLiveMode());
