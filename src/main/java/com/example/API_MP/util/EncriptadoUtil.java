@@ -26,6 +26,14 @@ public class EncriptadoUtil {
     }
 
     public static String desencriptar(String encryptedText) {
-   
+        try {
+            SecretKeySpec secretKey = new SecretKeySpec(secretKeyEncriptar.getBytes(), algoritmoEncriptar);
+            Cipher cipher = Cipher.getInstance(algoritmoEncriptar);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(encryptedText));
+            return new String(decryptedBytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al descifrar el token", e);
+        }
     }
 }
