@@ -36,6 +36,7 @@ import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
+import com.example.API_MP.util.EncriptadoUtil;
 
 @Service
 public class MercadoPagoService {
@@ -72,7 +73,8 @@ public class MercadoPagoService {
             throw new RuntimeException("Producto vendido o reservado, prueba mas tarde");
         }
         // me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
-        String accessToken = oauthService.obtenerAccessTokenPorId(1L);
+        String accessTokenEncriptado = oauthService.obtenerAccessTokenPorId(1L);
+        String accessToken = EncriptadoUtil.desencriptar(accessTokenEncriptado);
 
         // Verifico que no este vencido ni revocado
         if (!oauthService.AccessTokenValido(accessToken)) {
@@ -159,7 +161,9 @@ public class MercadoPagoService {
             Productos producto = transaccion.getProducto();
 
             // Obtengo el accessToken del vendedor por si hay que rembolsar
-            String accessToken = oauthService.obtenerAccessTokenPorId(1L);
+            String accessTokenEncriptado = oauthService.obtenerAccessTokenPorId(1L);
+            String accessToken = EncriptadoUtil.desencriptar(accessTokenEncriptado);
+
 
             // Se verifica que se encontro el id de Transaccion
             if (externalReference == null) {
