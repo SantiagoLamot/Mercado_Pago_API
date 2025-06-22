@@ -27,6 +27,7 @@ import com.example.API_MP.excepciones.TokenRevocadoException;
 import com.example.API_MP.repository.ProductosRepository;
 import com.example.API_MP.repository.TransaccionesRepository;
 import com.example.API_MP.repository.UsuariosRepository;
+import com.example.API_MP.util.EncriptadoUtil;
 import com.mercadopago.MercadoPagoConfig;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.preference.PreferenceClient;
@@ -36,7 +37,6 @@ import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
-import com.example.API_MP.util.EncriptadoUtil;
 
 @Service
 public class MercadoPagoService {
@@ -53,13 +53,15 @@ public class MercadoPagoService {
     private final TransaccionesRepository transaccionRepository;
     private final UsuariosRepository usuariosRepository;
     private final OauthService oauthService;
+    private final EncriptadoUtil encriptadoUtil;
 
     public MercadoPagoService(ProductosRepository p, TransaccionesRepository t, UsuariosRepository u,
-            OauthService oauthService) {
+            OauthService o, EncriptadoUtil e) {
         this.productoRepository = p;
         this.transaccionRepository = t;
         this.usuariosRepository = u;
-        this.oauthService = oauthService;
+        this.oauthService = o;
+        this.encriptadoUtil = e;
     }
 
     // ===============CREAR PREFERENCIA===============
@@ -74,7 +76,7 @@ public class MercadoPagoService {
         }
         // me falta obtener el id del vendedor ej: producto.getVendedor.getId() = 1
         String accessTokenEncriptado = oauthService.obtenerAccessTokenPorId(1L);
-        String accessToken = EncriptadoUtil.desencriptar(accessTokenEncriptado);
+        String accessToken = encriptadoUtil.desencriptar(accessTokenEncriptado);
 
         // Verifico que no este vencido ni revocado
         if (!oauthService.AccessTokenValido(accessToken)) {
@@ -93,7 +95,7 @@ public class MercadoPagoService {
                 .build();
 
         // ACA CAMBIAR y Obtener el usuario logueado el cual va a comprar
-        Usuarios usuarioComprador = usuariosRepository.findById(new Long("1"))
+        Usuarios usuarioComprador = usuariosRepository.findById(new Long("2"))
                 .orElseThrow(() -> new RuntimeException("usuario no encontrado"));
 
         // Se crea la transaccion en la base de datos y se obtiene id de la misma
@@ -162,7 +164,7 @@ public class MercadoPagoService {
 
             // Obtengo el accessToken del vendedor por si hay que rembolsar
             String accessTokenEncriptado = oauthService.obtenerAccessTokenPorId(1L);
-            String accessToken = EncriptadoUtil.desencriptar(accessTokenEncriptado);
+            String accessToken = encriptadoUtil.desencriptar(accessTokenEncriptado);
 
 
             // Se verifica que se encontro el id de Transaccion
@@ -179,6 +181,8 @@ public class MercadoPagoService {
                 transaccion.setEstado("reembolsado");
                 return;
             }
+            
+            //FALTA ARREGAR PARA REEMBOLSAR SI EL MONTO DEL PROD SE MODIFICO
             // if (payment.getTransactionAmount() !=
             // BigDecimal.valueOf(producto.getPrecio())) {
             // System.out.println("El producto cambio el precio.");
@@ -201,12 +205,9 @@ public class MercadoPagoService {
     private void reembolsarPago(String paymentId, String accessToken) {
         try {
             MercadoPagoConfig.setAccessToken(accessToken);
-            System.out.println("Procesando reembolso para ID de pago: " + paymentId);
             // Obtener el pago con PaymentClient
             PaymentClient client = new PaymentClient();
             Payment payment = client.get(Long.parseLong(paymentId));
-            System.out.println("Estado del pago: " + payment.getStatus());
-            System.out.println("ExternalReference: " + payment.getExternalReference());
             // Ejecutar el reembolso
             PaymentRefund refundPayment = client.refund(payment.getId());
 
