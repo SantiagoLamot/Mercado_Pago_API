@@ -26,17 +26,17 @@ public class Transacciones {
     private LocalDateTime fecha = LocalDateTime.now();
 
     @ManyToOne
-    @JoinColumn(name = "usuario_id")
-    private Usuarios usuario;
+    @JoinColumn(name = "usuario_comprador_id")
+    private Usuarios usuarioComprador;
 
     @ManyToOne
     @JoinColumn(name = "producto_id")
     private Productos producto;
 
-    public Transacciones(String estado, Usuarios usuario, Productos producto){
+    public Transacciones(String estado, Usuarios usuarioComprador, Productos producto){
         this.estado = estado;
         this.fecha = LocalDateTime.now();
-        this.usuario = usuario;
+        this.usuarioComprador = usuarioComprador;
         this.producto = producto;
     }
 }
