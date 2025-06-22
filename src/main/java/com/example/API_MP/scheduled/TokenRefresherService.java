@@ -16,21 +16,22 @@ import com.example.API_MP.util.EncriptadoUtil;
 public class TokenRefresherService {
     private final MercadoPagoService mercadoPagoService;
     private final OauthService oauthService;
+    private final EncriptadoUtil encriptadoUtil;
 
-    public TokenRefresherService(MercadoPagoService mercadoPagoService, OauthService oauthService){
+    public TokenRefresherService(MercadoPagoService mercadoPagoService, OauthService oauthService, EncriptadoUtil encriptadoUtil){
         this.mercadoPagoService = mercadoPagoService;
         this.oauthService = oauthService;
+        this.encriptadoUtil = encriptadoUtil;
     }
 
     @Scheduled(fixedRate = 3600000) // cada 1 hora (en milisegundos)
     public void refrescarTokens() {
-        System.out.println("Se ejecuto scheduler token refresh");
         List<OauthToken> tokens = oauthService.obtenerTokenDeUsuariosVendedores();
         for (OauthToken token : tokens) {
             if (tokenExpirado(token)) {
                 try {
-                    OauthTokenRequestDTO nuevoToken = mercadoPagoService.refrescarToken(EncriptadoUtil.desencriptar(token.getRefreshToken()));
-                    oauthService.guardarToken(nuevoToken, token.getUsuario());
+                    OauthTokenRequestDTO nuevoToken = mercadoPagoService.refrescarToken(encriptadoUtil.desencriptar(token.getRefreshToken()));
+                    oauthService.actualizarToken(nuevoToken, token.getUsuario());
                 } catch (Exception e) {
                     System.err.println("Error actualizando token para usuario " + token.getUsuario().getNombre());
                     System.err.println(e.getMessage());
