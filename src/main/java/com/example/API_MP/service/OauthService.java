@@ -38,12 +38,14 @@ public class OauthService {
     private final UsuariosService usuariosService;
     private final OauthTokenRepository oauthRepository;
     private final StateOauthService stateOauthService;
+    private final EncriptadoUtil encriptadoUtil;
 
     public OauthService(UsuariosService usuariosService, OauthTokenRepository oauthRepository,
-            StateOauthService stateOauthService) {
+            StateOauthService stateOauthService, EncriptadoUtil encriptadoUtil) {
         this.usuariosService = usuariosService;
         this.oauthRepository = oauthRepository;
         this.stateOauthService = stateOauthService;
+        this.encriptadoUtil = encriptadoUtil;
     }
 
     public String UrlAutorizacion() {
@@ -58,36 +60,58 @@ public class OauthService {
                 "&state=" + state;
     }
 
-    public String obtenerAccessToken(String code, String state) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    public void obtenerAccessToken(String code, String state) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type", "authorization_code");
-        body.add("client_id", clientId);
-        body.add("client_secret", clientSecret);
-        body.add("code", code);
-        body.add("redirect_uri", redirectUrl);
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "authorization_code");
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+            body.add("code", code);
+            body.add("redirect_uri", redirectUrl);
 
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(
-                "https://api.mercadopago.com/oauth/token",
-                request,
-                OauthTokenRequestDTO.class);
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<OauthTokenRequestDTO> response = restTemplate.postForEntity(
+                    "https://api.mercadopago.com/oauth/token",
+                    request,
+                    OauthTokenRequestDTO.class);
 
-        guardarToken(response.getBody(), usuariosService.obtenerUsuarioPorState(state));
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new RuntimeException("Error al obtener el token de Mercado Pago");
+            }
 
-        return response.toString();
+            guardarTokenNuevo(response.getBody(), usuariosService.obtenerUsuarioPorState(state));
+
+        } catch (HttpClientErrorException e) {
+            throw new RuntimeException("Error de cliente: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener token: " + e.getMessage());
+        }
     }
 
-    public void guardarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
+    public void actualizarToken(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
         OauthToken token = oauthRepository.findByUsuarioId(usuario.getId())
-            .orElseThrow(()-> new RuntimeException("Error al obtener token para guardar nuevo"));
-        token.setAccessToken(EncriptadoUtil.encriptar(oauthTokenDTO.getAccessToken()));
-        token.setRefreshToken(EncriptadoUtil.encriptar(oauthTokenDTO.getRefreshToken()));
-        token.setPublicKey(oauthTokenDTO.getPublicKey());
+                .orElseThrow(() -> new RuntimeException("Error al obtener token para guardar nuevo"));
+        token.setAccessToken(encriptadoUtil.encriptar(oauthTokenDTO.getAccessToken()));
+        token.setRefreshToken(encriptadoUtil.encriptar(oauthTokenDTO.getRefreshToken()));
+        token.setPublicKey(encriptadoUtil.encriptar(oauthTokenDTO.getPublicKey()));
+        token.setUserId(oauthTokenDTO.getUserId());
+        token.setLiveMode(oauthTokenDTO.isLiveMode());
+        token.setExpiresAt(LocalDateTime.now().plusSeconds(oauthTokenDTO.getExpiresIn()));
+        token.setUsuario(usuario);
+
+        oauthRepository.save(token);
+    }
+
+    public void guardarTokenNuevo(OauthTokenRequestDTO oauthTokenDTO, Usuarios usuario) {
+        OauthToken token = new OauthToken();
+        token.setAccessToken(encriptadoUtil.encriptar(oauthTokenDTO.getAccessToken()));
+        token.setRefreshToken(encriptadoUtil.encriptar(oauthTokenDTO.getRefreshToken()));
+        token.setPublicKey(encriptadoUtil.encriptar(oauthTokenDTO.getPublicKey()));
         token.setUserId(oauthTokenDTO.getUserId());
         token.setLiveMode(oauthTokenDTO.isLiveMode());
         token.setExpiresAt(LocalDateTime.now().plusSeconds(oauthTokenDTO.getExpiresIn()));
@@ -122,7 +146,7 @@ public class OauthService {
         }
     }
 
-    public List<OauthToken> obtenerTokenDeUsuariosVendedores(){
+    public List<OauthToken> obtenerTokenDeUsuariosVendedores() {
         return oauthRepository.findByUsuario_VendedorTrue();
     }
 }
