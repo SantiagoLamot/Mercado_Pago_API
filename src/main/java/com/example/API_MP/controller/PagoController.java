@@ -40,11 +40,4 @@ public class PagoController {
                     .body("Error procesando webhook: " + e.getMessage());
         }
     }
-    // ===ENDPOINT PARA PROBAR QUE FORMATO DE JSON RECIBIMOS
-    // @PostMapping("/webhook")
-    // public ResponseEntity<String> recibirWebhook(@RequestBody String rawJson) {
-    // System.out.println("Webhook recibido:");
-    // System.out.println(rawJson);
-    // return ResponseEntity.ok("ok");
-    // }
 }
