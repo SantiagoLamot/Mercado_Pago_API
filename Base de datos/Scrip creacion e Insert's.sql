@@ -15,16 +15,21 @@ CREATE TABLE productos (
     precio DECIMAL(10,2) NOT NULL,
     reservado BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_reserva DATETIME DEFAULT CURRENT_TIMESTAMP,
-    vendido BOOLEAN NOT NULL DEFAULT FALSE
+    vendido BOOLEAN NOT NULL DEFAULT FALSE,
+    vendedor_id BIGINT NOT NULL,
+    CONSTRAINT fk_producto_usuario
+        FOREIGN KEY (vendedor_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE transacciones (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     estado VARCHAR(50),
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    usuario_id BIGINT,
+    usuario_comprador_id BIGINT,
     producto_id BIGINT,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    FOREIGN KEY (usuario_comprador_id) REFERENCES usuarios(id),
     FOREIGN KEY (producto_id) REFERENCES productos(id)
 );
 
@@ -50,18 +55,18 @@ CREATE TABLE state_oauth (
     usuario_id BIGINT NOT NULL,
     creado DATETIME NOT NULL
 );
-INSERT INTO usuarios (nombre, email) VALUES
-('Santiago Lamot', 'santilamot@gmail.com'),
-('Bautista Lamot', 'bauti.lamot@gmail.com'),
-('Carlos Tévez', 'carlitos10@boca.com');
+INSERT INTO usuarios (nombre, email, vendedor) VALUES
+('Santiago Lamot', 'santilamot@gmail.com', 1),
+('Bautista Lamot', 'bauti.lamot@gmail.com', 0),
+('Carlos Tévez', 'carlitos10@boca.com', 0);
 
 
-INSERT INTO productos (nombre, precio) VALUES
-('Camiseta Boca Juniors 23/24', 1.99),
-('Mate con escudo de Boca', 3999.50),
-('Bufanda Azul y Oro', 4500.00),
-('Yerba Mate Playadito 1kg', 1800.00),
-('Alfajores Havanna x6', 2500.00),
-('Camiseta Selección Argentina 3 estrellas', 32000.00),
-('Pulcera Boca Juniors', 1990.00),
-('Pelota Adidas AFA', 8900.00);
+INSERT INTO productos (nombre, precio, vendedor_id) VALUES
+('Camiseta Boca Juniors 23/24', 1.99, 1),
+('Mate con escudo de Boca', 3999.50, 1),
+('Bufanda Azul y Oro', 4500.00, 1),
+('Yerba Mate Playadito 1kg', 1800.00, 1),
+('Alfajores Havanna x6', 2500.00, 1),
+('Camiseta Selección Argentina 3 estrellas', 32000.00, 1),
+('Pulcera Boca Juniors', 1990.00, 1),
+('Pelota Adidas AFA', 8900.00, 1);
