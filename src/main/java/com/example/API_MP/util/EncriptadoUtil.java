@@ -5,15 +5,17 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
+@Service
 public class EncriptadoUtil {
     @Value("${algoritmoEncriptar}")
-    private static String algoritmoEncriptar;
+    private String algoritmoEncriptar;
     
     @Value("${secretKeyEncriptar}")
-    private static String secretKeyEncriptar;
+    private String secretKeyEncriptar;
 
-    public static String encriptar(String plainText) {
+    public String encriptar(String plainText) {
         try {
             SecretKeySpec secretKey = new SecretKeySpec(secretKeyEncriptar.getBytes(), algoritmoEncriptar);
             Cipher cipher = Cipher.getInstance(algoritmoEncriptar);
@@ -25,7 +27,7 @@ public class EncriptadoUtil {
         }
     }
 
-    public static String desencriptar(String encryptedText) {
+    public String desencriptar(String encryptedText) {
         try {
             SecretKeySpec secretKey = new SecretKeySpec(secretKeyEncriptar.getBytes(), algoritmoEncriptar);
             Cipher cipher = Cipher.getInstance(algoritmoEncriptar);
